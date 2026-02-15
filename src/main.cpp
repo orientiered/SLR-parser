@@ -1,19 +1,28 @@
 #include "lexer.hpp"
 #include <iostream>
 
-int main() {
-    mathLexer lexer;          // create our lexer
-    lexer.yylex();           // scan entire input, filling lexer.tokens
+#include "syntax_analyzer.hpp"
 
-    // Print all collected tokens
-    for (const auto& tok : lexer.tokens) {
+int main() {
+    mathLexer lexer;
+    // lexer.yylex();
+
+    auto state = CLOSURE({{0, 0}});
+    for (auto item: state) {
+        std::cout << item << "\n";
+    }
+
+    for (Token tok = lexer(); tok.type_ != TokenType::END; tok = lexer()) {
         std::cout << "Token: ";
-        switch (tok.type) {
-            case NUMBER:   std::cout << "NUMBER  " << tok.lexeme
+        switch (tok.type_) {
+            case TokenType::END:    std::cout << "$"; break;
+            case TokenType::NUMBER:   std::cout << "NUMBER  " << tok.lexeme_
                                      << " (value=" << tok.int_val << ")"; break;
-            case OPERATOR: std::cout << "OPERATOR" << tok.lexeme
+            case TokenType::OPERATOR: std::cout << "OPERATOR" << tok.lexeme_
                                      << " (char='" << tok.op_char << "')"; break;
-            case UNKNOWN:  std::cout << "UNKNOWN " << tok.lexeme; break;
+            case TokenType::IDENTIFIER:
+                           std::cout << "IDENTIFIER " << tok.lexeme_; break;
+            case TokenType::UNKNOWN:  std::cout << "UNKNOWN " << tok.lexeme_; break;
         }
         std::cout << std::endl;
     }

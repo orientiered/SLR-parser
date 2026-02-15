@@ -10,35 +10,29 @@
 %option c++
 %option noyywrap
 %option prefix="math"
+%option yylineno
 %%
 
-[0-9]+    {
-    tokens.push_back({
-        NUMBER,
-        std::string(yytext),
-        std::atoi(yytext),
-        0
-    });
+[0-9]+   {
+    add_token<TokenType::NUMBER>(yytext);
+    return static_cast<int>(TokenType::NUMBER);
 }
 
-[-+*/]    {
-    tokens.push_back({
-        OPERATOR,
-        std::string(yytext),
-        0,
-        yytext[0]
-    });
+[-+*/()] {
+    add_token<TokenType::OPERATOR>(yytext);
+    return static_cast<int>(TokenType::OPERATOR);
+}
+
+[a-zA-Z]+ {
+    add_token<TokenType::IDENTIFIER>(yytext);
+    return static_cast<int>(TokenType::IDENTIFIER);
 }
 
 [ \t\n]   ;               // ignore whitespace
 
-.         {
-    tokens.push_back({
-        UNKNOWN,
-        std::string(yytext),
-        0,
-        0
-    });
+.        {
+    add_token<TokenType::UNKNOWN>(yytext);
+    return static_cast<int>(TokenType::UNKNOWN);
 }
 
 %%
