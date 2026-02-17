@@ -6,11 +6,15 @@
 int main() {
     mathLexer lexer;
     // lexer.yylex();
+    SyntaxAnalyzer parser;
 
-    auto state = CLOSURE({{0, 0}});
-    for (auto item: state) {
-        std::cout << item << "\n";
-    }
+    parser.init();
+
+    parser.dump("docs/action_goto.csv");
+    // auto state = CLOSURE({{0, 0}});
+    // for (auto item: state) {
+    //     std::cout << item << "\n";
+    // }
 
     for (Token tok = lexer(); tok.type_ != TokenType::END; tok = lexer()) {
         std::cout << "Token: ";
