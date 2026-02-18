@@ -1,6 +1,8 @@
-#include "lexer.hpp"
 #include <iostream>
+#include <fstream>
 
+#include "lexer.hpp"
+#include "AST.hpp"
 #include "syntax_analyzer.hpp"
 
 int main() {
@@ -11,24 +13,18 @@ int main() {
     parser.init();
 
     parser.dump("docs/action_goto.csv");
-    // auto state = CLOSURE({{0, 0}});
-    // for (auto item: state) {
-    //     std::cout << item << "\n";
-    // }
+
     parser.parse();
-    // for (Token tok = lexer(); tok.type_ != TokenType::END; tok = lexer()) {
-    //     std::cout << "Token: ";
-    //     switch (tok.type_) {
-    //         case TokenType::END:    std::cout << "$"; break;
-    //         case TokenType::NUMBER:   std::cout << "NUMBER  " << tok.lexeme_
-    //                                  << " (value=" << tok.int_val << ")"; break;
-    //         case TokenType::OPERATOR: std::cout << "OPERATOR" << tok.lexeme_
-    //                                  << " (char='" << tok.op_char << "')"; break;
-    //         case TokenType::IDENTIFIER:
-    //                        std::cout << "IDENTIFIER " << tok.lexeme_; break;
-    //         case TokenType::UNKNOWN:  std::cout << "UNKNOWN " << tok.lexeme_; break;
-    //     }
-    //     std::cout << std::endl;
-    // }
+
+    AST::NodePtr root = parser.getRoot();
+
+    std::ofstream tree_file("ast.dot");
+
+    AST::dumpTree(root, tree_file);
+
+    tree_file.close();
+
+    system("dot -Tsvg ast.dot -o ast.svg");
+
     return 0;
 }

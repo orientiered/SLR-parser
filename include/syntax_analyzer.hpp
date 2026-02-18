@@ -3,6 +3,7 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <variant>
 #include <vector>
 
 #include "AST.hpp"
@@ -13,6 +14,11 @@ E -> E [+-] T | T
 T -> T [*\/] F | F
 F -> ( E ) | id | num
 */
+
+using reduceFunc = void(std::vector<std::variant<Token, AST::NodePtr>>& ast);
+reduceFunc reduceBinOp;
+reduceFunc reduceParen;
+reduceFunc reduceNumId;
 
 class SyntaxAnalyzer {
 public:
@@ -42,9 +48,12 @@ public:
         }
     }
 
+
     struct Production {
         Symbol lhs;
         std::vector<Symbol> rhs;
+
+        reduceFunc *reduce;
     };
 
     /* ================= LANGUAGE GRAMMAR RULES ================ */
@@ -54,16 +63,16 @@ public:
         {E0, {E}},
 
         {E, {T}},
-        {E, {E, PLUS, T}},
-        {E, {E, MINUS, T}},
+        {E, {E, PLUS, T}, reduceBinOp},
+        {E, {E, MINUS, T}, reduceBinOp},
 
         {T, {F}},
-        {T, {T, MUL, F}},
-        {T, {T, DIV, F}},
+        {T, {T, MUL, F}, reduceBinOp},
+        {T, {T, DIV, F}, reduceBinOp},
 
-        {F, {LBRACKET, E, RBRACKET}},
-        {F, {ID}},
-        {F, {NUM}}
+        {F, {LBRACKET, E, RBRACKET}, reduceParen},
+        {F, {ID}, reduceNumId},
+        {F, {NUM}, reduceNumId}
     };
 
     /* ================= ITEM ======================== */
@@ -134,13 +143,15 @@ private:
     mathLexer lexer;
     /* ================ PARSING STATE =========================== */
     std::vector<std::pair<int, Symbol>> stateStack;
-    std::vector<std::shared_ptr<AST::NodePtr>> ast;
+    AST::NodePtr root;
 
     void report_error(int state, const Token& tok);
 
 public:
     int init();
     int parse();
+
+    AST::NodePtr getRoot() { return root; }
 
     void dump(const std::string action_goto_path);
 

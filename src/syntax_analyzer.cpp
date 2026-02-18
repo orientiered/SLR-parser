@@ -1,6 +1,10 @@
 #include <algorithm>
 #include <ostream>
+#include <fstream>
+#include <variant>
+
 #include "syntax_analyzer.hpp"
+#include "AST.hpp"
 
 using State_t = SyntaxAnalyzer::State_t;
 
@@ -313,7 +317,6 @@ int SyntaxAnalyzer::init() {
     return build_action_goto();
 }
 
-#include <fstream>
 
 std::ostream& SyntaxAnalyzer::printAction(std::ostream& os, const ActionEntry& entry) {
     switch (entry.type) {
@@ -398,8 +401,64 @@ void SyntaxAnalyzer::report_error(int state, const Token& tok) {
     std::cout << " }\n";
 }
 
+/* ==================== REDUCERS ====================================== */
+void reduceBinOp(std::vector<std::variant<Token, AST::NodePtr>>& ast) {
+    std::cerr << "Access node\n";
+    AST::NodePtr right = std::get<AST::NodePtr>(ast.back());
+    ast.pop_back();
+
+    std::cerr << "Access token\n";
+    Token binOp        = std::get<Token>(ast.back());
+    ast.pop_back();
+
+    std::cerr << "Access node\n";
+    AST::NodePtr left  = std::get<AST::NodePtr>(ast.back());
+    ast.pop_back();
+
+    AST::Operator op;
+    switch (binOp.op_char) {
+        case '+': op = AST::PLUS; break;
+        case '-': op = AST::MINUS; break;
+        case '*': op = AST::MUL; break;
+        case '/': op = AST::DIV; break;
+    }
+
+    ast.push_back(AST::makeBinOp(left, op, right));
+    std::cerr << "BinOP reduce done\n";
+}
+
+void reduceParen(std::vector<std::variant<Token, AST::NodePtr>>& ast) {
+    // simply removing brackets, there is no need for them in AST
+
+    ast.pop_back(); // bracket
+
+    std::variant<Token, AST::NodePtr> node = std::move(ast.back());
+    ast.pop_back(); // AST Node
+
+    ast.pop_back(); // bracket
+
+    ast.push_back(node); // moving node back
+}
+
+void reduceNumId(std::vector<std::variant<Token, AST::NodePtr>>& ast) {
+    Token tok = std::get<Token>(ast.back());
+    ast.pop_back();
+
+    if (tok.type_ == TokenType::IDENTIFIER) {
+        ast.push_back(AST::makeId(tok.lexeme_));
+    } else if (tok.type_ == TokenType::NUMBER) {
+        ast.push_back(AST::makeNum(tok.int_val));
+    } else {
+        std::cerr << "Reduce error: wrong token type (expected number or identifier)\n";
+    }
+}
+
+/* =============================== Main parsing loop ============================ */
 int SyntaxAnalyzer::parse() {
     Token tok = lexer();
+
+    std::vector<std::variant<Token, AST::NodePtr>> ast;
+
     stateStack.push_back({0, EPS});
 
     auto print_parse_state = [&]() {
@@ -432,10 +491,6 @@ int SyntaxAnalyzer::parse() {
         int cur_state = top.first;
         Symbol s = token_to_symbol(tok);
         ActionEntry entry = action_goto[cur_state][s];
-        // std::cout << cur_state << " " << s << " ";
-        // printAction(std::cout, entry);
-        // std::cout << "\n";
-
 
         switch (entry.type) {
             case ERROR:
@@ -448,6 +503,8 @@ int SyntaxAnalyzer::parse() {
             case SHIFT:
             {
                 stateStack.push_back({entry.val, s});
+                ast.push_back(tok);
+
                 tok = lexer();
             }
                 break;
@@ -455,21 +512,26 @@ int SyntaxAnalyzer::parse() {
             {
                 const Production& prod = grammar[entry.val];
 
-                stateStack.erase(stateStack.end()-prod.rhs.size(), stateStack.end());
+                if (prod.reduce) {
+                    prod.reduce(ast);
+                }
 
+                stateStack.erase(stateStack.end()-prod.rhs.size(), stateStack.end());
                 int new_state = action_goto[stateStack.back().first][prod.lhs].val;
+
                 stateStack.push_back({new_state, prod.lhs});
             }
                 break;
             case ACCEPT:
                 std::cout << "Parsing complete\n";
+                root = std::get<AST::NodePtr>(ast.front());
                 return 0;
-                break;
             case GOTO:
             default: std::cerr << "UNKNOWN ENTRY TYPE\n"; break;
 
         }
 
     }
+
     return 0;
 }

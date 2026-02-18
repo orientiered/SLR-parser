@@ -6,10 +6,11 @@ namespace AST {
 
     struct Node;
     using NodePtr = std::shared_ptr<Node>;
+    using WeakNodePtr = std::weak_ptr<Node>;
 
     struct Node {
         std::size_t id;
-        NodePtr parent;
+        WeakNodePtr parent;
 
     protected:
         Node(): id(++next_id) {}

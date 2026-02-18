@@ -42,6 +42,18 @@ struct Token {
     }
 };
 
+inline std::ostream& operator<<(std::ostream& os, const Token& tok) {
+    switch(tok.type_) {
+        case TokenType::END: os << "$"; break;
+        case TokenType::NUMBER: os << tok.int_val; break;
+        case TokenType::OPERATOR: os << tok.op_char; break;
+        case TokenType::IDENTIFIER: os << tok.lexeme_; break;
+        case TokenType::UNKNOWN: os << "UNK:" << tok.lexeme_; break;
+        default: break;
+    }
+    return os;
+}
+
 // ---------- LEXER CLASS  ----------
 class mathLexer : public mathFlexLexer {
 private:
