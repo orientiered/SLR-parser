@@ -16,10 +16,12 @@ enum class TokenType { END = 0, NUMBER, OPERATOR, IDENTIFIER, UNKNOWN };
 struct Token {
     TokenType type_;
     std::string lexeme_;
+    int line_;
+    int pos_;
     int int_val;
     char op_char;
 
-    Token(TokenType T, const char *text) :type_(T), lexeme_(text) {
+    Token(TokenType T, const char *text, int line = 0, int pos = 0) :type_(T), lexeme_(text), line_(line), pos_(pos) {
         switch(T) {
         case TokenType::END:
             int_val = 0;
@@ -44,11 +46,12 @@ struct Token {
 class mathLexer : public mathFlexLexer {
 private:
     Token current_tok = Token{TokenType::UNKNOWN, ""};
+    int yypos = 0;
 public:
     const Token& operator()() {
         if (yylex()) {
         } else {
-            current_tok = {TokenType::END, ""};
+            current_tok = {TokenType::END, "", lineno(), yypos};
         }
         return current_tok;
     }
@@ -58,7 +61,7 @@ public:
     template<TokenType T>
     void add_token(const char *text) {
         // tokens.push_back({T, text});
-        current_tok = Token{T, text};
+        current_tok = Token{T, text, lineno(), yypos};
     }
 
     int yylex() override;

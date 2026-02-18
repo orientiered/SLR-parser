@@ -10,6 +10,28 @@ static void merge_inplace(std::set<T>& dest, const std::set<T>& src) {
         dest.insert(elem);
 }
 
+
+SyntaxAnalyzer::Symbol SyntaxAnalyzer::token_to_symbol(const Token& tok) {
+    switch(tok.type_) {
+        case TokenType::END: return END;
+        case TokenType::NUMBER: return NUM;
+        case TokenType::IDENTIFIER: return ID;
+        case TokenType::OPERATOR: {
+            switch (tok.op_char) {
+                case '+': return PLUS;
+                case '-': return MINUS;
+                case '*': return MUL;
+                case '/': return DIV;
+                case '(': return LBRACKET;
+                case ')': return RBRACKET;
+            }
+        }
+        case TokenType::UNKNOWN: return END;
+        default: return END;
+    }
+}
+
+
 State_t SyntaxAnalyzer::state_closure(State_t I) {
     State_t result = I;
 
@@ -43,7 +65,7 @@ State_t SyntaxAnalyzer::state_closure(State_t I) {
 
 std::ostream& operator<<(std::ostream& os, SyntaxAnalyzer::Symbol s) {
     const char * const sym_to_text[] = {
-        "EPS",
+        "$", // EPS
         "E0", "E", "T", "F",
         "num", "id", "+", "-", "*", "/", "(", ")", "$"
     };
@@ -223,6 +245,8 @@ int SyntaxAnalyzer::build_action_goto() {
     action_goto.clear();
     action_goto.resize(states.size());
 
+    int conflicts_count = 0;
+
     auto report_conflict = [&](int state_idx, const Item& item, Symbol s, std::string msg) {
         const ActionEntry& entry = action_goto[state_idx][s];
         std::cout << "Grammar conflict:" << msg << "\n" <<
@@ -230,6 +254,8 @@ int SyntaxAnalyzer::build_action_goto() {
             "item " << item << "\n" <<
             "problem sym" << s << "\n" <<
             "type" << ((entry.type == SHIFT) ? "SHIFT" : "REDUCE") << "\n";
+
+        conflicts_count++;
     };
 
     for (std::size_t state_idx = 0; state_idx < states.size(); state_idx++) {
@@ -266,14 +292,6 @@ int SyntaxAnalyzer::build_action_goto() {
             }
         }
 
-        // for (auto [pair, j]  : state_transitions) {
-        //     int i = pair.first;
-        //     Symbol sym = pair.second;
-        //     if (state_idx == i && !isTerm(sym)) {
-        //         action_goto[state_idx][sym] = {GOTO, j};
-        //     }
-        // }
-
     }
 
     for (auto [pair, j]  : state_transitions) {
@@ -284,7 +302,7 @@ int SyntaxAnalyzer::build_action_goto() {
         }
     }
 
-    return 0;
+    return conflicts_count;
 }
 
 
@@ -297,7 +315,24 @@ int SyntaxAnalyzer::init() {
 
 #include <fstream>
 
-void SyntaxAnalyzer::dump(std::string action_table_path) {
+std::ostream& SyntaxAnalyzer::printAction(std::ostream& os, const ActionEntry& entry) {
+    switch (entry.type) {
+        case ERROR: break;
+        case ACCEPT: os << "A"; break;
+        case SHIFT:  os << "S"; break;
+        case REDUCE: os << "R"; break;
+        case GOTO:   os << "G"; break;
+        default: std::cerr << "UNKNOWN ENTRY TYPE\n";
+    }
+
+    if (entry.type != ERROR)
+        os << entry.val;
+
+    return os;
+}
+
+
+void SyntaxAnalyzer::dump(const std::string action_table_path) {
     std::cout << "=============FIRST==============\n";
     for (Symbol s: allSymbols) {
         std::cout << s << " -> ";
@@ -324,21 +359,6 @@ void SyntaxAnalyzer::dump(std::string action_table_path) {
         }
     }
 
-    auto printAction = [](std::ostream& os, const ActionEntry& entry) {
-        switch (entry.type) {
-            case ERROR: break;
-            case ACCEPT: os << "A"; break;
-            case SHIFT:  os << "S"; break;
-            case REDUCE: os << "R"; break;
-            case GOTO:   os << "G"; break;
-            default: std::cerr << "UNKNOWN ENTRY TYPE\n";
-        }
-
-        if (entry.type != ERROR)
-            os << entry.val;
-    };
-
-
     std::ofstream csv(action_table_path);
     if (!csv.good() ) {
         std::cerr << "Failed to open file" << action_table_path << "\n";
@@ -363,4 +383,93 @@ void SyntaxAnalyzer::dump(std::string action_table_path) {
     }
 
     csv.close();
+}
+
+
+void SyntaxAnalyzer::report_error(int state, const Token& tok) {
+    std::cout << "Error at " << tok.line_ << ":" << tok.pos_ << "\n";
+    std::cout << "Got '" << tok.lexeme_ << "', expected either of {";
+    for (Symbol s: allSymbols) {
+        if (isTerm(s) && action_goto[state][s].type != ERROR) {
+            std::cout << s << " ";
+        }
+    }
+
+    std::cout << " }\n";
+}
+
+int SyntaxAnalyzer::parse() {
+    Token tok = lexer();
+    stateStack.push_back({0, EPS});
+
+    auto print_parse_state = [&]() {
+        auto top = stateStack.back();
+        ActionEntry entry = action_goto[top.first][token_to_symbol(tok)];
+
+        std::cout << top.first << " | ";
+        for (auto [state, s]: stateStack) {
+            std::cout << s << " ";
+        }
+
+        std::cout << " | " << tok.lexeme_ << " | ";
+
+        printAction(std::cout, entry);
+
+        if (entry.type == REDUCE) std::cout << " " << Item{entry.val, -1};
+        std::cout << "\n";
+    };
+
+    while (true) {
+
+        print_parse_state();
+
+        if (tok.type_ == TokenType::UNKNOWN) {
+            std::cout << "Lexical error: " << tok.lexeme_ << "\n";
+            return 2;
+        }
+
+        auto top = stateStack.back();
+        int cur_state = top.first;
+        Symbol s = token_to_symbol(tok);
+        ActionEntry entry = action_goto[cur_state][s];
+        // std::cout << cur_state << " " << s << " ";
+        // printAction(std::cout, entry);
+        // std::cout << "\n";
+
+
+        switch (entry.type) {
+            case ERROR:
+            {
+                report_error(cur_state, tok);
+                tok = lexer();
+                return 1;
+            }
+                // break;
+            case SHIFT:
+            {
+                stateStack.push_back({entry.val, s});
+                tok = lexer();
+            }
+                break;
+            case REDUCE:
+            {
+                const Production& prod = grammar[entry.val];
+
+                stateStack.erase(stateStack.end()-prod.rhs.size(), stateStack.end());
+
+                int new_state = action_goto[stateStack.back().first][prod.lhs].val;
+                stateStack.push_back({new_state, prod.lhs});
+            }
+                break;
+            case ACCEPT:
+                std::cout << "Parsing complete\n";
+                return 0;
+                break;
+            case GOTO:
+            default: std::cerr << "UNKNOWN ENTRY TYPE\n"; break;
+
+        }
+
+    }
+    return 0;
 }

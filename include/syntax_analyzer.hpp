@@ -23,6 +23,7 @@ public:
         E0, E, T, F,
         NUM, ID, PLUS, MINUS, MUL, DIV, LBRACKET, RBRACKET, END
     };
+    Symbol token_to_symbol(const Token& tok);
 
     const std::vector<Symbol> allSymbols = {
         E0, E, T, F,
@@ -129,20 +130,24 @@ private:
         }
     };
 
+    std::ostream& printAction(std::ostream& os, const ActionEntry& entry);
+
     // unified action and goto table
     std::map<std::pair<int, Symbol>, int> state_transitions;
     std::vector<std::map<Symbol, ActionEntry>> action_goto;
 
     mathLexer lexer;
     /* ================ PARSING STATE =========================== */
-    std::vector<int> stateStack;
+    std::vector<std::pair<int, Symbol>> stateStack;
     std::vector<std::shared_ptr<Node>> ast;
+
+    void report_error(int state, const Token& tok);
 
 public:
     int init();
     int parse();
 
-    void dump(std::string action_goto_path);
+    void dump(const std::string action_goto_path);
 
 };
 
