@@ -1,19 +1,18 @@
 #pragma once
 
-#include <lexer.hpp>
 #include <map>
 #include <memory>
 #include <set>
 #include <vector>
 
+#include "AST.hpp"
+#include "lexer.hpp"
 /*
 E0 -> E
 E -> E [+-] T | T
 T -> T [*\/] F | F
 F -> ( E ) | id | num
 */
-
-struct Node {};
 
 class SyntaxAnalyzer {
 public:
@@ -30,8 +29,6 @@ public:
         NUM, ID, PLUS, MINUS, MUL, DIV, LBRACKET, RBRACKET, END
     };
 
-    // TODO: symbol from token ctor
-
     inline bool isTerm(Symbol s) {
         switch(s) {
             case E0: case E: case T: case F:
@@ -44,7 +41,6 @@ public:
                 return false;
         }
     }
-
 
     struct Production {
         Symbol lhs;
@@ -69,9 +65,10 @@ public:
         {F, {ID}},
         {F, {NUM}}
     };
-    /* ================= ITEM ======================== */
-    // @brief Production from grammar + dot position
 
+    /* ================= ITEM ======================== */
+
+    // @brief Production from grammar + dot position
     struct Item {
         int id;
         int dotPos;
@@ -84,8 +81,6 @@ public:
         }
         std::ostream& printItem(std::ostream& os);
     };
-
-
 
     inline Symbol getItemSymbol(Item item) {
         const std::vector<Symbol>& rhs = grammar[item.id].rhs;
@@ -139,7 +134,7 @@ private:
     mathLexer lexer;
     /* ================ PARSING STATE =========================== */
     std::vector<std::pair<int, Symbol>> stateStack;
-    std::vector<std::shared_ptr<Node>> ast;
+    std::vector<std::shared_ptr<AST::NodePtr>> ast;
 
     void report_error(int state, const Token& tok);
 
