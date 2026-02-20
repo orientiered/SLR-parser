@@ -1,4 +1,5 @@
 #include "AST.hpp"
+#include <iostream>
 #include <memory>
 #include <ostream>
 
@@ -6,7 +7,7 @@ namespace AST {
     // initializing id for nodes
     std::size_t Node::next_id = 0;
 
-    void BinOpNode::dump(std::ostream& os) {
+    void BinOpNode::dump(std::ostream& os, DumpType type) {
         auto label = [&]() {
             switch(op) {
                 case PLUS: return '+';
@@ -17,31 +18,66 @@ namespace AST {
             }
         };
 
-        // dumping itself
-        os << "  node" << id << " [label=\"" << label()
-            << "\", shape=rectangle, style=filled, fillcolor=\"#e1f5ff\"];\n";
+        switch(type) {
+            case GRAPHVIZ:
+            // dumping itself
+            os << "  node" << id << " [label=\"" << label()
+                << "\", shape=rectangle, style=filled, fillcolor=\"#e1f5ff\"];\n";
 
-        // dumping children
-        if (left) {
-            left->dump(os);
-            os << "  node" << id << " -> node" << left->id
-                << " [label=\"left\"];\n";
-        }
-        if (right) {
-            right->dump(os);
-            os << "  node" << id << " -> node" << right->id
-                << " [label=\"right\"];\n";
+            // dumping children
+            if (left) {
+                left->dump(os, type);
+                os << "  node" << id << " -> node" << left->id
+                    << " [label=\"left\"];\n";
+            }
+            if (right) {
+                right->dump(os, type);
+                os << "  node" << id << " -> node" << right->id
+                    << " [label=\"right\"];\n";
+            }
+
+            break;
+
+            case SERIALIZE:
+            os << "(BINOP:" << label();
+            if (left) left->dump(os, type);
+            if (right) right->dump(os, type);
+            os << ")";
+            break;
+            default:
+            std::cerr << "Can't dump BinOp to this type\n";
+            break;
         }
     }
 
-    void IdNode::dump(std::ostream& os) {
-        os << "  node" << id << " [label=\"" << "ID:" << id_name
-            << "\", shape=rectangle, style=filled, fillcolor=\"#f1e364\"];\n";
+    void IdNode::dump(std::ostream& os, DumpType type) {
+        switch(type) {
+            case GRAPHVIZ:
+            os << "  node" << id << " [label=\"" << "ID:" << id_name
+                << "\", shape=rectangle, style=filled, fillcolor=\"#f1e364\"];\n";
+            break;
+            case SERIALIZE:
+            os << "(ID:" << id_name << ")";
+            break;
+            default:
+            std::cerr << "Can't dump IdNode to this type\n";
+            break;
+        }
     }
 
-    void NumNode::dump(std::ostream& os) {
-        os << "  node" << id << " [label=\"" << "NUM:" << num
-            << "\", shape=rectangle, style=filled, fillcolor=\"#38d878\"];\n";
+    void NumNode::dump(std::ostream& os, DumpType type) {
+        switch(type) {
+            case GRAPHVIZ:
+            os << "  node" << id << " [label=\"" << "NUM:" << num
+                << "\", shape=rectangle, style=filled, fillcolor=\"#38d878\"];\n";
+            break;
+            case SERIALIZE:
+            os << "(NUM:" << num << ")";
+            break;
+            default:
+            std::cerr << "Can't dump NumNode to this type\n";
+            break;
+        }
     }
 
     NodePtr makeBinOp(NodePtr left, Operator op, NodePtr right) {
@@ -68,7 +104,7 @@ namespace AST {
     }
 
 
-    void dumpTree(const NodePtr& root, std::ostream& os) {
+    void dumpTreeAsGraphviz(const NodePtr& root, std::ostream& os) {
         if (!root) {
             os << "digraph AST {\n";
             os << "  label=\"Empty tree\";\n";
@@ -82,9 +118,19 @@ namespace AST {
         os << "  edge [fontname=\"Courier\", fontsize=8];\n";
         os << "\n";
 
-        root->dump(os);
+        root->dump(os, GRAPHVIZ);
 
         os << "}\n";
     }
+
+    void dumpTreeAsString(const NodePtr& root, std::ostream& os) {
+        if (!root) {
+            os << "<EMPTY_TREE>";
+            return;
+        }
+
+        root->dump(os, SERIALIZE);
+    }
+
 };
 

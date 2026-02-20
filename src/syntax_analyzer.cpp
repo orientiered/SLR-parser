@@ -452,34 +452,34 @@ void reduceNumId(std::vector<std::variant<Token, AST::NodePtr>>& ast) {
 }
 
 /* =============================== Main parsing loop ============================ */
-int SyntaxAnalyzer::parse() {
+SyntaxAnalyzer::ParseStatus SyntaxAnalyzer::parse() {
     return parse(std::cin);
 }
 
-int SyntaxAnalyzer::parse(const std::string& expr) {
+SyntaxAnalyzer::ParseStatus SyntaxAnalyzer::parse(const std::string& expr) {
     std::istringstream expr_stream(expr);
 
     return parse(expr_stream);
 }
 
-int SyntaxAnalyzer::parse_file(const std::string& path) {
+SyntaxAnalyzer::ParseStatus SyntaxAnalyzer::parse_file(const std::string& path) {
     std::ifstream file_stream(path);
     if (!file_stream.is_open()) {
         std::cerr << "Failed to open file '" << path << "'\n";
-        return EXIT_FAILURE;
+        return ParseStatus::BAD_INPUT;
     }
 
     return parse(file_stream);
 }
 
 void SyntaxAnalyzer::print_parse_state(std::ostream& os, char delimeter) {
-    auto [top_state, top_tok] = stateStack.back();
+    int cur_state = stateStack.back().first;
 
     const Token& buf_tok = lexer.cur_tok();
 
-    ActionEntry entry = action_goto[top_state][token_to_symbol(buf_tok)];
+    ActionEntry entry = action_goto[cur_state][token_to_symbol(buf_tok)];
 
-    os << top_state  << " " << delimeter << " ";
+    os << cur_state  << " " << delimeter << " ";
     for (auto [state, s]: stateStack) {
         os << s << " ";
     }
@@ -493,9 +493,9 @@ void SyntaxAnalyzer::print_parse_state(std::ostream& os, char delimeter) {
 }
 
 
-int SyntaxAnalyzer::parse(std::istream& in) {
+SyntaxAnalyzer::ParseStatus SyntaxAnalyzer::parse(std::istream& in) {
     // initializing lexer
-    lexer.switch_streams(&in);
+    lexer.restart(in);
 
     std::vector<std::variant<Token, AST::NodePtr>> ast;
 
@@ -506,11 +506,12 @@ int SyntaxAnalyzer::parse(std::istream& in) {
 
     while (true) {
 
-        print_parse_state(std::cout);
+        if (0)
+            print_parse_state(std::cout);
 
         if (tok.type_ == TokenType::UNKNOWN) {
             std::cout << "Lexical error: " << tok.lexeme_ << "\n";
-            return 2;
+            return ParseStatus::LEXICAL_ERR;
         }
 
         auto top = stateStack.back();
@@ -522,7 +523,7 @@ int SyntaxAnalyzer::parse(std::istream& in) {
             case ERROR:
             {
                 report_error(cur_state, tok);
-                return 1;
+                return ParseStatus::SYNTAX_ERR;
             }
             case SHIFT:
             {
@@ -547,14 +548,16 @@ int SyntaxAnalyzer::parse(std::istream& in) {
             }
                 break;
             case ACCEPT:
-                std::cout << "Parsing complete\n";
+                // std::cout << "Parsing complete\n";
                 root = std::get<AST::NodePtr>(ast.front());
-                return 0;
+                return ParseStatus::SUCCESS;
             case GOTO:
-            default: std::cerr << "UNKNOWN ENTRY TYPE\n"; break;
+            default: std::cerr << "UNKNOWN ENTRY TYPE\n";
+                return ParseStatus::FATAL_ERR;
+            break;
 
         }
     }
 
-    return 0;
+    return ParseStatus::FATAL_ERR;
 }

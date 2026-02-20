@@ -1,0 +1,5 @@
+{"1+x*y/2+4", "(BINOP:+(BINOP:+(NUM:1)(BINOP:/(BINOP:*(ID:x)(ID:y))(NUM:2)))(NUM:4))"},
+{"1-x/y*2+4", "(BINOP:+(BINOP:-(NUM:1)(BINOP:*(BINOP:/(ID:x)(ID:y))(NUM:2)))(NUM:4))"},
+{"1-2+3-4", "(BINOP:-(BINOP:+(BINOP:-(NUM:1)(NUM:2))(NUM:3))(NUM:4))"},
+{"x*y-4/3", "(BINOP:-(BINOP:*(ID:x)(ID:y))(BINOP:/(NUM:4)(NUM:3)))"},
+{"a*b/c*d", "(BINOP:*(BINOP:/(BINOP:*(ID:a)(ID:b))(ID:c))(ID:d))"},

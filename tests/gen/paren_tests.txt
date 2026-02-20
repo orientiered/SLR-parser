@@ -1,0 +1,10 @@
+{"1+y*z", "(BINOP:+(NUM:1)(BINOP:*(ID:y)(ID:z)))"},
+{"(1+y)*z", "(BINOP:*(BINOP:+(NUM:1)(ID:y))(ID:z))"},
+{"1+((x)*z)", "(BINOP:+(NUM:1)(BINOP:*(ID:x)(ID:z)))"},
+{"(((x)))+(y/(43-x))", "(BINOP:+(ID:x)(BINOP:/(ID:y)(BINOP:-(NUM:43)(ID:x))))"},
+Error at 1:2
+Got '', expected either of {+ - )  }
+{"(x", "<EMPTY_TREE>"},
+Error at 1:3
+Got ')', expected either of {num id (  }
+{"1+()", "<EMPTY_TREE>"},

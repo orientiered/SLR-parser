@@ -155,15 +155,22 @@ public:
     /// @brief Compute action and goto tables
     int init();
 
+    enum class ParseStatus {SUCCESS = 0, BAD_INPUT, LEXICAL_ERR, SYNTAX_ERR, FATAL_ERR};
+
     /// @brief Parse text and build AST
     /// @return 0 on success, positive integer otherwise
-    int parse();
-    int parse(const std::string& expr);
-    int parse(std::istream& in);
-    int parse_file(const std::string& path);
+    ParseStatus parse();
+    ParseStatus parse(const std::string& expr);
+    ParseStatus parse(std::istream& in);
+    ParseStatus parse_file(const std::string& path);
 
     /// @brief Get root of AST build from previous parse() call
-    AST::NodePtr get_root() { return root; }
+    /// Parser won't store AST after calling this function
+    AST::NodePtr get_root() {
+        AST::NodePtr res = root;
+        root = nullptr;
+        return res;
+    }
 
     /// @brief Print FIRST and FOLLOW sets, canonic states to standard output
     /// Dump action/goto table as csv table to file

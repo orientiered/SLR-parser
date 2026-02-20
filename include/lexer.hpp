@@ -68,6 +68,11 @@ private:
 
     int yylex() override;
 public:
+    void restart(std::istream& in) {
+        yyrestart(in);
+        yycol = 0;
+    }
+
     const Token& cur_tok() {
         return current_tok;
     }

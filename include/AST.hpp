@@ -4,6 +4,7 @@
 #include <ostream>
 namespace AST {
 
+    enum DumpType {GRAPHVIZ = 0, SERIALIZE};
     struct Node;
     using NodePtr = std::shared_ptr<Node>;
     using WeakNodePtr = std::weak_ptr<Node>;
@@ -16,7 +17,8 @@ namespace AST {
         Node(): id(++next_id) {}
 
     public:
-        virtual void dump(std::ostream& os) = 0;
+
+        virtual void dump(std::ostream& os, DumpType type = GRAPHVIZ) = 0;
         virtual ~Node() = default;
 
     private:
@@ -33,7 +35,7 @@ namespace AST {
         NodePtr right;
         Operator op;
 
-        void dump(std::ostream& os) override;
+        void dump(std::ostream& os, DumpType type = GRAPHVIZ) override;
 
         ~BinOpNode() override = default;
     };
@@ -43,7 +45,7 @@ namespace AST {
     struct IdNode final : Node {
         std::string id_name;
 
-        void dump(std::ostream& os) override;
+        void dump(std::ostream& os, DumpType type = GRAPHVIZ) override;
         ~IdNode() override = default;
     };
 
@@ -52,12 +54,13 @@ namespace AST {
     struct NumNode final: Node {
         int num;
 
-        void dump(std::ostream& os) override;
+        void dump(std::ostream& os, DumpType type = GRAPHVIZ) override;
 
         ~NumNode() override = default;
     };
 
     NodePtr makeNum(int value);
 
-    void dumpTree(const NodePtr& root, std::ostream& os);
+    void dumpTreeAsGraphviz(const NodePtr& root, std::ostream& os);
+    void dumpTreeAsString(const NodePtr& root, std::ostream& os);
 };

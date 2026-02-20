@@ -1,0 +1,5 @@
+Error at 1:2
+Got '+', expected either of {num id (  }
+{"1++2", "<EMPTY_TREE>"},
+Lexical error: =
+{"x=y+5", "<EMPTY_TREE>"},

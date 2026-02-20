@@ -13,7 +13,18 @@ int main() {
         return EXIT_FAILURE;
     }
 
-    parser.dump_tables("docs/action_goto.csv");
+    // parser.dump_tables("docs/action_goto.csv");
+
+    while (std::cin) {
+        std::string expr;
+        std::getline(std::cin, expr);
+        if (expr.size() == 0) break;
+        parser.parse(expr);
+
+        std::cout << "{\"" << expr << "\", \"";
+        AST::dumpTreeAsString(parser.get_root(), std::cout);
+        std::cout << "\"},\n";
+    }
 
     parser.parse("1+1*2");
 
@@ -21,7 +32,7 @@ int main() {
 
     std::ofstream tree_file("ast.dot");
 
-    AST::dumpTree(root, tree_file);
+    AST::dumpTreeAsGraphviz(root, tree_file);
 
     tree_file.close();
 

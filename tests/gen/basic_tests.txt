@@ -1,0 +1,6 @@
+{"135", "(NUM:135)"},
+{"x", "(ID:x)"},
+{"17+19", "(BINOP:+(NUM:17)(NUM:19))"},
+{"id*5", "(BINOP:*(ID:id)(NUM:5))"},
+{"0/yy", "(BINOP:/(NUM:0)(ID:yy))"},
+{"18-xyz", "(BINOP:-(NUM:18)(ID:xyz))"},

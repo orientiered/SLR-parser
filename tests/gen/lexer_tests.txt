@@ -1,0 +1,11 @@
+{"abcdefghijklmnopqrstuvwxyz", "(ID:abcdefghijklmnopqrstuvwxyz)"},
+{"ABCDEFGHIJKLMNOPQRSTUVYXYZ", "(ID:ABCDEFGHIJKLMNOPQRSTUVYXYZ)"},
+{"1234567890", "(NUM:1234567890)"},
+{"0", "(NUM:0)"},
+{"0123", "(NUM:123)"},
+Lexical error: _
+{"var_1", "<EMPTY_TREE>"},
+Lexical error: ^
+{"3^9", "<EMPTY_TREE>"},
+Lexical error: ~
+{"xy~4", "<EMPTY_TREE>"},
