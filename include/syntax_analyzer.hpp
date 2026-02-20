@@ -8,12 +8,7 @@
 
 #include "AST.hpp"
 #include "lexer.hpp"
-/*
-E0 -> E
-E -> E [+-] T | T
-T -> T [*\/] F | F
-F -> ( E ) | id | num
-*/
+
 
 using reduceFunc = void(std::vector<std::variant<Token, AST::NodePtr>>& ast);
 reduceFunc reduceBinOp;
@@ -58,6 +53,13 @@ public:
 
     /* ================= LANGUAGE GRAMMAR RULES ================ */
 
+    /*
+        E0 -> E
+        E -> E [+-] T | T
+        T -> T [*\/] F | F
+        F -> ( E ) | id | num
+    */
+
     const static inline Symbol start_symbol = E0;
     const static inline std::vector<Production> grammar = {
         {E0, {E}},
@@ -88,10 +90,10 @@ public:
         bool operator==(const Item& other) const {
             return id == other.id && dotPos == other.dotPos;
         }
-        std::ostream& printItem(std::ostream& os);
+        std::ostream& print_item(std::ostream& os);
     };
 
-    inline Symbol getItemSymbol(Item item) {
+    inline Symbol get_item_symbol(Item item) {
         const std::vector<Symbol>& rhs = grammar[item.id].rhs;
         if (item.dotPos == rhs.size()) return END;
 
@@ -110,8 +112,8 @@ public:
     std::set<Symbol> first_of_string(const std::vector<Symbol>& rhs);
 
     std::vector<State_t> build_canonic_states();
-    int computeFirst();
-    int computeFollow();
+    int compute_first();
+    int compute_follow();
     int build_action_goto();
 
     /* ================ ACTION TABLE ============================ */
@@ -129,31 +131,43 @@ private:
 
         ActionEntry(): type(ERROR), val(-1) {} // ERROR must be default
         ActionEntry(ActionType t, int v): type(t), val(v) {}
+
         bool operator==(const ActionEntry& other) {
             return type == other.type && val == other.val;
         }
     };
 
-    std::ostream& printAction(std::ostream& os, const ActionEntry& entry);
+    std::ostream& print_action(std::ostream& os, const ActionEntry& entry);
 
     // unified action and goto table
     std::map<std::pair<int, Symbol>, int> state_transitions;
     std::vector<std::map<Symbol, ActionEntry>> action_goto;
 
-    mathLexer lexer;
     /* ================ PARSING STATE =========================== */
+    mathLexer lexer;
     std::vector<std::pair<int, Symbol>> stateStack;
     AST::NodePtr root;
 
     void report_error(int state, const Token& tok);
+    void print_parse_state(std::ostream& os, char delimeter = '|');
 
 public:
+    /// @brief Compute action and goto tables
     int init();
+
+    /// @brief Parse text and build AST
+    /// @return 0 on success, positive integer otherwise
     int parse();
+    int parse(const std::string& expr);
+    int parse(std::istream& in);
+    int parse_file(const std::string& path);
 
-    AST::NodePtr getRoot() { return root; }
+    /// @brief Get root of AST build from previous parse() call
+    AST::NodePtr get_root() { return root; }
 
-    void dump(const std::string action_goto_path);
+    /// @brief Print FIRST and FOLLOW sets, canonic states to standard output
+    /// Dump action/goto table as csv table to file
+    void dump_tables(const std::string action_goto_path);
 
 };
 

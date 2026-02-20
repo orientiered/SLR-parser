@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <ostream>
 #include <fstream>
+#include <sstream>
 #include <variant>
 
 #include "syntax_analyzer.hpp"
@@ -36,6 +37,39 @@ SyntaxAnalyzer::Symbol SyntaxAnalyzer::token_to_symbol(const Token& tok) {
 }
 
 
+
+std::ostream& operator<<(std::ostream& os, SyntaxAnalyzer::Symbol s) {
+    const char * const sym_to_text[] = {
+        "$", // EPS
+        "E0", "E", "T", "F",
+        "num", "id", "+", "-", "*", "/", "(", ")", "$"
+    };
+
+    os << sym_to_text[s];
+    return os;
+}
+
+
+std::ostream& SyntaxAnalyzer::Item::print_item(std::ostream& os) {
+
+
+    const Production& prod = ::SyntaxAnalyzer::grammar[id];
+    os << prod.lhs << " -> ";
+    for (int i = 0; i < prod.rhs.size(); i++) {
+        if (i == dotPos) os << "· ";
+        os << prod.rhs[i] << " ";
+    }
+
+    if (dotPos == prod.rhs.size()) os << "· ";
+
+
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, SyntaxAnalyzer::Item item) {
+    return item.print_item(os);
+}
+
 State_t SyntaxAnalyzer::state_closure(State_t I) {
     State_t result = I;
 
@@ -46,7 +80,7 @@ State_t SyntaxAnalyzer::state_closure(State_t I) {
         // new productions in closure
         std::set<Symbol> newLhs{};
         for (auto item: result) {
-            Symbol curSym = getItemSymbol(item);
+            Symbol curSym = get_item_symbol(item);
             if (!isTerm(curSym)) newLhs.insert(curSym);
         }
 
@@ -67,43 +101,11 @@ State_t SyntaxAnalyzer::state_closure(State_t I) {
     return result;
 }
 
-std::ostream& operator<<(std::ostream& os, SyntaxAnalyzer::Symbol s) {
-    const char * const sym_to_text[] = {
-        "$", // EPS
-        "E0", "E", "T", "F",
-        "num", "id", "+", "-", "*", "/", "(", ")", "$"
-    };
-
-    os << sym_to_text[s];
-    return os;
-}
-
-
-std::ostream& SyntaxAnalyzer::Item::printItem(std::ostream& os) {
-
-
-    const Production& prod = ::SyntaxAnalyzer::grammar[id];
-    os << prod.lhs << " -> ";
-    for (int i = 0; i < prod.rhs.size(); i++) {
-        if (i == dotPos) os << "· ";
-        os << prod.rhs[i] << " ";
-    }
-
-    if (dotPos == prod.rhs.size()) os << "· ";
-
-
-    return os;
-}
-
-std::ostream& operator<<(std::ostream& os, SyntaxAnalyzer::Item item) {
-    return item.printItem(os);
-}
-
 State_t SyntaxAnalyzer::state_goto(State_t I, Symbol s) {
     State_t result{};
 
     for (auto item: I) {
-        if (getItemSymbol(item) == s) {
+        if (get_item_symbol(item) == s) {
             result.insert({item.id, item.dotPos+1});
         }
     }
@@ -121,7 +123,7 @@ std::vector<State_t> SyntaxAnalyzer::build_canonic_states() {
 
         std::set<Symbol> symbols_for_goto;
         for (Item item: result[i]) {
-            symbols_for_goto.insert(getItemSymbol(item));
+            symbols_for_goto.insert(get_item_symbol(item));
         }
         symbols_for_goto.erase(END); // $ must not be included
 
@@ -173,7 +175,7 @@ std::set<SyntaxAnalyzer::Symbol> SyntaxAnalyzer::first_of_string(const std::vect
 }
 
 
-int SyntaxAnalyzer::computeFirst() {
+int SyntaxAnalyzer::compute_first() {
     FIRST.clear();
     // initialization: terminals have itself in their first set
     for (const Symbol s: allSymbols) {
@@ -204,7 +206,7 @@ int SyntaxAnalyzer::computeFirst() {
     return 0;
 }
 
-int SyntaxAnalyzer::computeFollow() {
+int SyntaxAnalyzer::compute_follow() {
     // init
     FOLLOW.clear();
     FOLLOW[start_symbol] = {END};
@@ -268,7 +270,7 @@ int SyntaxAnalyzer::build_action_goto() {
 
             const Production& prod = grammar[item.id];
 
-            Symbol cur_sym = getItemSymbol(item);
+            Symbol cur_sym = get_item_symbol(item);
 
             if (cur_sym == END) {
                 if (prod.lhs == start_symbol) {
@@ -312,13 +314,13 @@ int SyntaxAnalyzer::build_action_goto() {
 
 int SyntaxAnalyzer::init() {
     states = build_canonic_states();
-    computeFirst();
-    computeFollow();
+    compute_first();
+    compute_follow();
     return build_action_goto();
 }
 
 
-std::ostream& SyntaxAnalyzer::printAction(std::ostream& os, const ActionEntry& entry) {
+std::ostream& SyntaxAnalyzer::print_action(std::ostream& os, const ActionEntry& entry) {
     switch (entry.type) {
         case ERROR: break;
         case ACCEPT: os << "A"; break;
@@ -335,7 +337,7 @@ std::ostream& SyntaxAnalyzer::printAction(std::ostream& os, const ActionEntry& e
 }
 
 
-void SyntaxAnalyzer::dump(const std::string action_table_path) {
+void SyntaxAnalyzer::dump_tables(const std::string action_table_path) {
     std::cout << "=============FIRST==============\n";
     for (Symbol s: allSymbols) {
         std::cout << s << " -> ";
@@ -378,7 +380,7 @@ void SyntaxAnalyzer::dump(const std::string action_table_path) {
             csv << i+1;
             for (Symbol sym: allSymbols) {
                 csv << ", ";
-                printAction(csv, action_goto[i][sym]);
+                print_action(csv, action_goto[i][sym]);
             }
             csv << "\n";
         }
@@ -403,15 +405,12 @@ void SyntaxAnalyzer::report_error(int state, const Token& tok) {
 
 /* ==================== REDUCERS ====================================== */
 void reduceBinOp(std::vector<std::variant<Token, AST::NodePtr>>& ast) {
-    std::cerr << "Access node\n";
     AST::NodePtr right = std::get<AST::NodePtr>(ast.back());
     ast.pop_back();
 
-    std::cerr << "Access token\n";
     Token binOp        = std::get<Token>(ast.back());
     ast.pop_back();
 
-    std::cerr << "Access node\n";
     AST::NodePtr left  = std::get<AST::NodePtr>(ast.back());
     ast.pop_back();
 
@@ -424,7 +423,6 @@ void reduceBinOp(std::vector<std::variant<Token, AST::NodePtr>>& ast) {
     }
 
     ast.push_back(AST::makeBinOp(left, op, right));
-    std::cerr << "BinOP reduce done\n";
 }
 
 void reduceParen(std::vector<std::variant<Token, AST::NodePtr>>& ast) {
@@ -455,32 +453,60 @@ void reduceNumId(std::vector<std::variant<Token, AST::NodePtr>>& ast) {
 
 /* =============================== Main parsing loop ============================ */
 int SyntaxAnalyzer::parse() {
-    Token tok = lexer();
+    return parse(std::cin);
+}
+
+int SyntaxAnalyzer::parse(const std::string& expr) {
+    std::istringstream expr_stream(expr);
+
+    return parse(expr_stream);
+}
+
+int SyntaxAnalyzer::parse_file(const std::string& path) {
+    std::ifstream file_stream(path);
+    if (!file_stream.is_open()) {
+        std::cerr << "Failed to open file '" << path << "'\n";
+        return EXIT_FAILURE;
+    }
+
+    return parse(file_stream);
+}
+
+void SyntaxAnalyzer::print_parse_state(std::ostream& os, char delimeter) {
+    auto [top_state, top_tok] = stateStack.back();
+
+    const Token& buf_tok = lexer.cur_tok();
+
+    ActionEntry entry = action_goto[top_state][token_to_symbol(buf_tok)];
+
+    os << top_state  << " " << delimeter << " ";
+    for (auto [state, s]: stateStack) {
+        os << s << " ";
+    }
+
+    os << " " << delimeter << " " << buf_tok.lexeme_ << " " << delimeter << " ";
+
+    print_action(os, entry);
+
+    if (entry.type == REDUCE) os << " " << Item{entry.val, -1};
+    os << "\n";
+}
+
+
+int SyntaxAnalyzer::parse(std::istream& in) {
+    // initializing lexer
+    lexer.switch_streams(&in);
 
     std::vector<std::variant<Token, AST::NodePtr>> ast;
 
+    stateStack.clear();
     stateStack.push_back({0, EPS});
 
-    auto print_parse_state = [&]() {
-        auto top = stateStack.back();
-        ActionEntry entry = action_goto[top.first][token_to_symbol(tok)];
-
-        std::cout << top.first << " | ";
-        for (auto [state, s]: stateStack) {
-            std::cout << s << " ";
-        }
-
-        std::cout << " | " << tok.lexeme_ << " | ";
-
-        printAction(std::cout, entry);
-
-        if (entry.type == REDUCE) std::cout << " " << Item{entry.val, -1};
-        std::cout << "\n";
-    };
+    Token tok = lexer.next_tok();
 
     while (true) {
 
-        print_parse_state();
+        print_parse_state(std::cout);
 
         if (tok.type_ == TokenType::UNKNOWN) {
             std::cout << "Lexical error: " << tok.lexeme_ << "\n";
@@ -496,16 +522,14 @@ int SyntaxAnalyzer::parse() {
             case ERROR:
             {
                 report_error(cur_state, tok);
-                tok = lexer();
                 return 1;
             }
-                // break;
             case SHIFT:
             {
                 stateStack.push_back({entry.val, s});
                 ast.push_back(tok);
 
-                tok = lexer();
+                tok = lexer.next_tok();
             }
                 break;
             case REDUCE:
@@ -530,7 +554,6 @@ int SyntaxAnalyzer::parse() {
             default: std::cerr << "UNKNOWN ENTRY TYPE\n"; break;
 
         }
-
     }
 
     return 0;

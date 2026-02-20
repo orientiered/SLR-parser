@@ -4,19 +4,20 @@
 #include "lexer.hpp"
 #include "AST.hpp"
 #include "syntax_analyzer.hpp"
-
 int main() {
-    // mathLexer lexer;
-    // lexer.yylex();
     SyntaxAnalyzer parser;
 
-    parser.init();
+    int error = parser.init();
+    if (error) {
+        std::cerr << "Parser initialization error\n";
+        return EXIT_FAILURE;
+    }
 
-    parser.dump("docs/action_goto.csv");
+    parser.dump_tables("docs/action_goto.csv");
 
-    parser.parse();
+    parser.parse("1+1*2");
 
-    AST::NodePtr root = parser.getRoot();
+    AST::NodePtr root = parser.get_root();
 
     std::ofstream tree_file("ast.dot");
 

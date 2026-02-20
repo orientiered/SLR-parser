@@ -58,25 +58,30 @@ inline std::ostream& operator<<(std::ostream& os, const Token& tok) {
 class mathLexer : public mathFlexLexer {
 private:
     Token current_tok = Token{TokenType::UNKNOWN, ""};
-    int yypos = 0;
+    int yycol = 0;
+
+    template<TokenType T>
+    void add_token(const char *text) {
+        // tokens.push_back({T, text});
+        current_tok = Token{T, text, lineno(), yycol};
+    }
+
+    int yylex() override;
 public:
-    const Token& operator()() {
+    const Token& cur_tok() {
+        return current_tok;
+    }
+
+    const Token& next_tok() {
         if (yylex()) {
         } else {
-            current_tok = {TokenType::END, "", lineno(), yypos};
+            current_tok = {TokenType::END, "", lineno(), yycol};
         }
         return current_tok;
     }
 
     // std::vector<Token> tokens;
 
-    template<TokenType T>
-    void add_token(const char *text) {
-        // tokens.push_back({T, text});
-        current_tok = Token{T, text, lineno(), yypos};
-    }
-
-    int yylex() override;
 };
 
 

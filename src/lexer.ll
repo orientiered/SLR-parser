@@ -15,28 +15,28 @@
 
 [0-9]+   {
     add_token<TokenType::NUMBER>(yytext);
-    yypos += yyleng;
+    yycol += yyleng;
     return static_cast<int>(TokenType::NUMBER);
 }
 
 [-+*/()] {
     add_token<TokenType::OPERATOR>(yytext);
-    yypos += yyleng;
+    yycol += yyleng;
     return static_cast<int>(TokenType::OPERATOR);
 }
 
 [a-zA-Z]+ {
     add_token<TokenType::IDENTIFIER>(yytext);
-    yypos += yyleng;
+    yycol += yyleng;
     return static_cast<int>(TokenType::IDENTIFIER);
 }
 
-[ \t]   { yypos += yyleng; }
-[\n]    { yypos = 0; }
+[ \t]   { yycol += yyleng; }
+[\n]    { yycol = 0; }
 
 .        {
     add_token<TokenType::UNKNOWN>(yytext);
-    yypos += yyleng;
+    yycol += yyleng;
     return static_cast<int>(TokenType::UNKNOWN);
 }
 
