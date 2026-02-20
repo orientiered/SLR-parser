@@ -403,6 +403,11 @@ void SyntaxAnalyzer::report_error(int state, const Token& tok) {
     std::cout << " }\n";
 }
 
+void SyntaxAnalyzer::set_log_stream(std::ostream& os) {
+    parse_log_stream = &os;
+}
+
+
 /* ==================== REDUCERS ====================================== */
 void reduceBinOp(std::vector<std::variant<Token, AST::NodePtr>>& ast) {
     AST::NodePtr right = std::get<AST::NodePtr>(ast.back());
@@ -507,8 +512,8 @@ SyntaxAnalyzer::ParseStatus SyntaxAnalyzer::parse(std::istream& in) {
 
     while (true) {
 
-        if (0)
-            print_parse_state(std::cout);
+        if (parse_log_stream)
+            print_parse_state(*parse_log_stream);
 
         if (tok.type_ == TokenType::UNKNOWN) {
             std::cout << "Lexical error: " << tok.lexeme_ << "\n";

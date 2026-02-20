@@ -174,6 +174,15 @@ int main(int argc, char* argv[]) {
             return EXIT_FAILURE;
         }
 
+        // Log stream init
+        std::ofstream parse_log("parse_log.csv");
+        if (!parse_log.is_open()) {
+            std::cerr << "Failed to open file for parsing log\n";
+        } else {
+            parser.set_log_stream(parse_log);
+        }
+
+
         // Export first, follow and action/goto tables
         if (opts.export_table) {
             std::cout << "Exporting SLR tables to: " << opts.table_file << "\n";

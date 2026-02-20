@@ -104,6 +104,7 @@ public:
 
     using State_t = std::set<Item>;
 
+private:
     State_t state_closure(State_t I);
 
     State_t state_goto(State_t I, Symbol s);
@@ -117,7 +118,6 @@ public:
     int build_action_goto();
 
     /* ================ ACTION TABLE ============================ */
-private:
     std::map<Symbol, std::set<Symbol>> FIRST;
     std::map<Symbol, std::set<Symbol>> FOLLOW;
 
@@ -144,16 +144,21 @@ private:
     std::vector<std::map<Symbol, ActionEntry>> action_goto;
 
     /* ================ PARSING STATE =========================== */
+    std::string parse_log_path = "parse_log.csv";
+    std::ostream *parse_log_stream = nullptr;
+
     mathLexer lexer;
     std::vector<std::pair<int, Symbol>> stateStack;
     AST::NodePtr root;
 
     void report_error(int state, const Token& tok);
-    void print_parse_state(std::ostream& os, char delimeter = '|');
+    void print_parse_state(std::ostream& os, char delimeter = ',');
 
 public:
     /// @brief Compute action and goto tables
     int init();
+
+    void set_log_stream(std::ostream& os);
 
     enum class ParseStatus {SUCCESS = 0, BAD_INPUT, LEXICAL_ERR, SYNTAX_ERR, FATAL_ERR};
 
