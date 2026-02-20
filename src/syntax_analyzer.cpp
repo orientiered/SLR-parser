@@ -494,6 +494,7 @@ void SyntaxAnalyzer::print_parse_state(std::ostream& os, char delimeter) {
 
 
 SyntaxAnalyzer::ParseStatus SyntaxAnalyzer::parse(std::istream& in) {
+    root = nullptr;
     // initializing lexer
     lexer.restart(in);
 

@@ -159,17 +159,19 @@ public:
 
     /// @brief Parse text and build AST
     /// @return 0 on success, positive integer otherwise
+    /// Root is erased at the start of parsing
     ParseStatus parse();
     ParseStatus parse(const std::string& expr);
     ParseStatus parse(std::istream& in);
     ParseStatus parse_file(const std::string& path);
 
     /// @brief Get root of AST build from previous parse() call
-    /// Parser won't store AST after calling this function
     AST::NodePtr get_root() {
-        AST::NodePtr res = root;
-        root = nullptr;
-        return res;
+        return root;
+    }
+
+    const AST::NodePtr peek_root() {
+        return root;
     }
 
     /// @brief Print FIRST and FOLLOW sets, canonic states to standard output
